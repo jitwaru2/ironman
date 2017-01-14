@@ -1,0 +1,21 @@
+// Conventions:
+// - all criteria are combined with logical AND
+// - names are searched by "contains" operator
+{
+	"query_options": {
+		"date_range": {
+			"start": "2016-09-01 12:00:00",
+			"end": "2016-10-01 12:00:00"
+		},
+		"tags": [
+			{
+				"name": "environment"
+			}
+		],
+		"names": [
+			{
+				"name": "H R 5303"
+			}
+		]
+	}
+}
