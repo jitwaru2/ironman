@@ -124,8 +124,9 @@ class IronManDB
 		$items2 = array();
 		foreach ($items as $item)
 		{
-			$itemName = strtolower($item->entity_overview['name']);
-			if (strpos($itemName, strtolower($name)) !== false) //php doesn't have a 'string contains' method
+			$needle = isset($item->entity_overview['name']) ? $item->entity_overview['name'] : '';
+			$itemName = strtolower();
+			if (strpos($itemName, strtolower($name)) !== false || strlen($needle) < 1) //php doesn't have a 'string contains' method
 				$items2[] = $item;
 		}
 		return $items2;
