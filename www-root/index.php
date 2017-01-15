@@ -1,5 +1,14 @@
 
-<script src="https://d3js.org/d3.v4.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.1.1.js"></script>
-<script type="text/javascript" src="./js/index.js"> </script>
-<link type="stylsheet" src="./style.css" />
+<?php include('frontend/templates/queryBuilder.php'); ?>
+
+<script type="text/javascript" src="frontend/resources/jquery.js"></script>
+<script type="text/javascript" src="frontend/resources/moment.js"></script>
+<script type="text/javascript" src="frontend/resources/typeahead.bundle.js"></script>
+<script type="text/javascript" src="frontend/resources/materialize/js/materialize.js"></script>
+<script type="text/javascript" src="frontend/resources/materialize-tags/js/materialize-tags.js"></script>
+
+<link rel="stylesheet" type="text/css" href="frontend/resources/materialize/css/materialize.css">
+<link rel="stylesheet" type="text/css" href="frontend/resources/materialize-tags/css/materialize-tags.css">
+
+<script type="text/javascript" src="frontend/js/index.js"></script>
+<link rel="stylesheet" type="text/css" href="frontend/css/index.css">
