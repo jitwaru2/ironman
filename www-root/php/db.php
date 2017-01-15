@@ -26,7 +26,6 @@ class IronManDB
 			$overview['datetime'] = $obj['updated'];
 			$overview['name'] = isset($obj['shortTitle']) ? $obj['shortTitle'] : $obj['officialTitle'];
 			$overview['description'] = $obj['officialTitle'];
-			$overview['tags'] = array($obj['subjectMain'], explode(',', $obj['subjectsAlt']));
 		}
 		else if ($type == 'bill_hist')
 		{
@@ -34,7 +33,6 @@ class IronManDB
 			$overview['type'] = 2;
 			$overview['datetime'] = $obj['time'];
 			$overview['name'] = '';
-			$overview['tags'] = array(); //TOOD: should this event type be tagged??
 		}
 		else if ($type == 'amdt')
 		{
@@ -46,9 +44,19 @@ class IronManDB
 		else if ($type == 'vote')
 		{
 			$overview['type'] = 4;
-			$overview['time'] = $obj['updated'];
+			$overview['datetime'] = $obj['time'];
 			$overview['name'] = $obj['question']; //TODO: consider naming like "Vote on H.R.123" if available
 			$overview['description'] = $obj['question']; //TODO: consider naming like "Vote on H.R.123" if available
+		}
+
+		$overview['tags'] = array();
+		$subjects = explode(',', $obj['subjectsAlt']);
+		//$subjects[] = $obj['subjectMain']; //NOTE: seems to be included in full subject list...
+		foreach ($subjects as $sub)
+		{
+			$tag = new stdClass();
+			$tag->name = $sub;
+			$overview['tags'][] = $tag;
 		}
 
 		$result = new stdClass();
@@ -56,20 +64,15 @@ class IronManDB
 		$result->entity_details = $obj;
 		return $result;
 	}
-
-	function getAll()
+	
+	function groupItems($bills, $bill_hist, $amdts, $votes)
 	{
-		$bills = $this->dbfed->getRows('Bills', 'ORDER BY introduced DESC LIMIT 100');
-		$bills_status = $this->dbfed->getRows('Bills_History', 'ORDER BY time DESC LIMIT 100');
-		$amdts = $this->dbfed->getRows('Amendments', 'ORDER BY updated DESC LIMIT 100');
-		$votes = $this->dbfed->getRows('Votes', 'ORDER BY time DESC LIMIT 100');
-
 		$items = array();
 		foreach ($bills as $item)
 		{
 			$items[] = $this->standardizeEntity($item, 'bill');
 		}
-		foreach ($bills_status as $item)
+		foreach ($bill_hist as $item)
 		{
 			$items[] = $this->standardizeEntity($item, 'bill_hist');
 		}
@@ -83,10 +86,50 @@ class IronManDB
 		}
 		return $items;
 	}
-	
-	function query()
+
+	function getAll()
 	{
+		$bills =	 $this->dbfed->getRows('Bills',			'ORDER BY updated DESC LIMIT 100');
+		$bill_hist = $this->dbfed->getRows('Bills_History',	'LEFT JOIN Bills ON ref_bill = Bills.id ORDER BY time DESC LIMIT 100');
+		$amdts =	 $this->dbfed->getRows('Amendments',	'LEFT JOIN Bills ON ref_bill = Bills.id ORDER BY Amendments.updated DESC LIMIT 100');
+		$votes =	 $this->dbfed->getRows('Votes',			'LEFT JOIN Bills ON ref_bill = Bills.id ORDER BY time DESC LIMIT 100');
+		$items = $this->groupItems($bills, $bill_hist, $amdts, $votes);
+		return $items;
+	}
+	
+	function query($get)
+	{
+		$dateStart = isset($get['date_start']) ? $get['date_start'] : '1900-01-01';
+		$dateEnd = isset($get['date_end']) ? $get['date_end'] : '2100-01-01';
+		$tags = $get['tags'];
+		$name = $get['name'];
 		
+		$whereDates = "BETWEEN '$dateStart 00:00:00' AND '$dateEnd 23:00:00'";
+		$whereTags = '';
+		foreach (explode(',', $tags) as $tag)
+		{
+			$whereTags .= "AND LOWER(subjectsAlt) LIKE '%$tag%' ";
+		}
+		//TODO: clean this up, make pretty. basic problem is different db query per field (i.e. date_start, name)
+		$whereClause1 = "WHERE (updated				$whereDates) $whereTags";
+		$whereClause2 = "WHERE (time				$whereDates) $whereTags";
+		$whereClause3 = "WHERE (Amendments.updated	$whereDates) $whereTags";
+		
+		$bills = 	 $this->dbfed->getRows('Bills',			"$whereClause1 ORDER BY updated DESC LIMIT 100");
+		$bill_hist = $this->dbfed->getRows('Bills_History',	"LEFT JOIN Bills ON ref_bill = Bills.id $whereClause2 ORDER BY time DESC LIMIT 100");
+		$amdts = 	 $this->dbfed->getRows('Amendments',	"LEFT JOIN Bills ON ref_bill = Bills.id $whereClause3 ORDER BY Amendments.updated DESC LIMIT 100");
+		$votes =	 $this->dbfed->getRows('Votes',			"LEFT JOIN Bills ON ref_bill = Bills.id $whereClause2 ORDER BY time DESC LIMIT 100");
+		
+		$items = $this->groupItems($bills, $bill_hist, $amdts, $votes);
+		$items2 = array();
+		foreach ($items as $item)
+		{
+			$needle = isset($item->entity_overview['name']) ? $item->entity_overview['name'] : '';
+			$itemName = strtolower();
+			if (strpos($itemName, strtolower($name)) !== false || strlen($needle) < 1) //php doesn't have a 'string contains' method
+				$items2[] = $item;
+		}
+		return $items2;
 	}
 
 }
