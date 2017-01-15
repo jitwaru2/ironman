@@ -1,83 +1,69 @@
-// $(document).ready(function(){
-  console.log("D3 script loaded")
 
-  //  NAME
-  //  START DATE
-  //  END DATE
-  //  TAGS
-  //  TYPE: BILL, AMENDMENT
-  const data = {
-          "entity_overview": {
-            "type_id": 4,
-            "name": "On Passage: H R 5303 Water Resources Development Act",
-            "datetime": "2016-09-28 18:20:00",
-            "tags": [
-              {
-                "name": "environment"
-              }
-            ],
-            "description": null
-          }
-        }
+d3.json('http://localhost:8888/api/getAll.php', function(err, data){
+  // var data = d3.range(1000).map(d3.randomBates(10));
 
-// http://bl.ocks.org/mbostock/4062085
+  console.log(data[0].entity_overview);
+  console.log(data);
 
-var x = d3.scaleLinear()
-    .range([window.innerHeight / 2, window.innerHeight / 2]);
+  let tags = []
+  let resources = []
+  for(var i = 0 ; i < 20; i++){
+    tags.push(data[i].entity_overview.tags.length);
+    resources.push(data[i].entity_details);
+  }
+  // data.forEach(function(obj){
+  //   tags.push(obj.entity_overview.tags.length);
 
-var y = d3.scaleLinear()
-    .range([window.innerHeight, 0]);
+  // });
+  console.log(tags);
+  var tagCount = tags.keys.length;
+  console.log(tagCount)
 
 
-d3.select('body').append("svg")
-  .attr("class", 'display')
-//adds graph to svg
-    .append("g")
-      .attr("class", "g")
-//labels for timespan
-        .append("text")
-          .attr("class", "title")
-          .attr("dy", ".71em")
-          .text(2015);
+  var formatCount = d3.format(",.0f");
 
-d3.json(url, (err, data) => {
-  data.forEach(function(d){
-    parseInt(d.datetime);
-  })
+  var svg = d3.select("body").append('svg'),
+      margin = {top: 10, right: 30, bottom: 30, left: 30},
+      width = +svg.attr("width"), //- margin.left - margin.right,
+      height = +svg.attr("height"), //- margin.top - margin.bottom,
+      g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  //gets value range for datetime
-  let start = d3.min(data, function(d) { return d.datetime; });
-  let end = d3.max(data, function(d) { return d.year; });
+  var x = d3.scaleLinear()
+      .rangeRound([0, width]);
 
-  //domain based of range
-  // x.domain([year1 - age1, year1]);
-  // y.domain([0, d3.max(data, function(d) { return d.people; })]);
+  var bins = d3.histogram()
+      .domain(x.domain())
+      .thresholds(x.ticks(20))
+      (tags);
 
-  // Produce a map from year and birthyear to [male, female].
-  data = d3.nest()
-      .key(function(d) { return d.datetime; })
-      .key(function(d) { return d.end - d.start; })
-      .rollup(function(v) { return v.map(function(d) { return d.people; }); })
-      .map(data);
+  var y = d3.scaleLinear()
+      .domain([0, d3.max(bins, function(d) { return d.length; })])
+      .range([height, 0]);
 
-  // Set axis to show the population values.
-  // svg.append("graph")
-  //     .attr("class", "y axis")
-  //     .call(yAxis)
-  //   .selectAll("graph")
-  //   //wtf is this?
-  //   .filter(function(value) { return !value; })
-  //     .classed("zero", true);
+  var bar = g.selectAll(".bar")
+    .data(bins)
+    .enter().append("g")
+      .attr("class", "bar")
+      // .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; });
 
-})
+  bar.append("rect")
+      .attr("x", 1)
+      .attr("width", 20)
+      .attr("height", function(d){ return height - y(d.length) });
 
-  // (data) => {
-  //graph for representing all tags
-  d3.select(display).style("color", function(err, data){
-    let { type_id, name, date, time, tags, description } = data.entity_overview;
-    console.log(name);
+  resources.forEach(function(obj){
+    bar.append("text")
+        .attr("dy", ".75em")
+        .attr("y", 6)
+        .attr("x", (x(bins[0].x1) - x(bins[0].x0)) / 2)
+        .attr("text-anchor", "middle")
+        .text(function(d) { return obj.subjectMain; });
   });
-// }
+
+  g.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
 
 
-// })
+});
